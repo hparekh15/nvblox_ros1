@@ -31,6 +31,8 @@ void NvbloxNode::processMessageQueue(
     std::deque<QueuedType>* queue_ptr, std::mutex* queue_mutex_ptr,
     MessageReadyCallback<QueuedType> message_ready_check,
     ProcessMessageCallback<QueuedType> callback) {
+
+  // std::cout << "Shaoting's here " << queue_ptr->size() << std::endl;
   timing::Timer ros_total_timer("ros/total");
 
   // Copy over all the pointers we actually want to process here.
@@ -45,6 +47,7 @@ void NvbloxNode::processMessageQueue(
 
   auto it_first_valid = queue_ptr->end();
   auto it_last_valid = queue_ptr->begin();
+  // std::cout << "test ptr equal" << it_first_valid == it_last_valid << std::endl;
 
   for (auto it = queue_ptr->begin(); it != queue_ptr->end(); it++) {
     // Process this image in the queue

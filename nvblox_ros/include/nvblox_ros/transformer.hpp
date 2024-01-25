@@ -110,6 +110,8 @@ class Transformer {
   std::unordered_map<std::string, Transform> sensor_transforms_;
 };
 
+// Eigen::Matrix4d convertROSTransformToEigenMatrix(const geometry_msgs::Transform& transform);
+
 }  // namespace nvblox
 
 #endif  // NVBLOX_ROS__TRANSFORMER_HPP_

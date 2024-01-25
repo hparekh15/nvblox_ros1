@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+  <arg name="use_sim_time"  default="true" />
+  <arg name="param_file" default="$(find nvblox_ros)/config/our_parameters.yaml"/>
+  <arg name="rviz" default="false" />
+
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find nvblox_ros)/rviz/our_new.rviz" if="$(arg rviz)"/>
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="actual_camera_name" args="0.0287836373e -0.0399214594 -0.0174024667 0.0983663, 0.7679008, -0.6278219, -0.0805736 Camera actual_camera" /> -->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="cam1_name" args="0.05367754966097055,  -0.055293443437159015, -0.04219948144965184,  0.683971, -0.0093754, 0.72940, 0.008130 new_EE cam_ros" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="cam1_name_optical" args="0, 0, 0, 0.5, -0.5, 0.5, -0.5 cam_ros actual_camera" /> -->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="cam1_name" args="0.06404233641619467,  -0.013125441866763211, -0.07387788932390998,  0.99973835 0.01681984 0.00910027 0.01255059 new_EE actual_camera" /> -->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_2_to_end_effector" args="0.06404233641619467,  -0.013125441866763211, -0.07387788932390998,  0.99973835, 0.01681984, 0.00910027, 0.01255059 panda_EE cam_2_link" /> Added BY Zeeshan, the format is "x y z quaternion_x quaternion_y quaternion_z quaternion_w parent_frame child_frame" It is working as has been checked for calibration, bottom camera -->
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="camera_1_to_end_effector" args="0.05367754966097055,  -0.055293443437159015, -0.04219948144965184,  0.68399842  0.00999967  0.72937631 -0.0075076 panda_EE cam_1_ros_link" /> Added BY Zeeshan, the format is "x y z quaternion_x quaternion_y quaternion_z quaternion_w parent_frame child_frame" It is working as has been checked for calibration, frontal camera -->
+  
+  <!-- <node pkg="tf2_ros" type="static_transform_publisher" name="cam1_ros2optical" args="0, 0, 0, 0.5, -0.5, 0.5, -0.5 ee_pose_cam_1 actual_cam_1" /> 
+  <node pkg="tf2_ros" type="static_transform_publisher" name="cam2_ros2optical" args="0, 0, 0, 0.5, -0.5, 0.5, -0.5 ee_pose_cam_2 actual_cam_2" /> -->
+
+  <rosparam file="$(arg param_file)" command="load"/>
+
+  <!-- <node pkg="nvblox_ros" type="nvblox_node" name="nvblox_node" respawn="false" output="screen" >
+    <rosparam file="$(arg param_file)"/>
+    <remap from="depth/image" to="/camera/aligned_depth_to_color/image_raw" />
+    <remap from="depth/camera_info" to="/camera/aligned_depth_to_color/camera_info" />
+
+    <remap from="color/image" to="/camera/color/image_raw" />
+    <remap from="color/camera_info" to="/camera/color/camera_info" />
+
+    <param name="global_frame" value="world" />
+    <param name="use_sim_time" value="$(arg use_sim_time)" />
+    <param name="use_lidar" value="false" />
+    <param name="voxel_size" value="0.05" />
+    <param name="esdf_slice_height" value="-0.75" />
+    <param name="esdf_2d" value="true" />
+    <param name="esdf_2d_min_height" value="-0.85" />
+    <param name="esdf_2d_max_height" value="0.25" />
+  </node> -->
+
+<!-- rosrun nvblox_ros nvblox_node _global_frame:=world _use_sim_time:=$(arg use_sim_time) _use_lidar:=false _voxel_size:=0.05 _esdf_slice_height:=-0.75 _esdf_2d:=true _esdf_2d_min_height:=-0.85 _esdf_2d_max_height:=0.25 depth/image:=/camera/aligned_depth_to_color/image_raw depth/camera_info:=/camera/aligned_depth_to_color/camera_info color/image:=/camera/color/image_raw color/camera_info:=/camera/color/camera_info -->
+
+</launch>

@@ -33,7 +33,9 @@ template <>
 __device__ bool getVoxelIntensity(const OccupancyVoxel& voxel, float voxel_size,
                                   float* intensity) {
   constexpr float kMinProbability = 0.5f;
+  // constexpr float kMaxProbability = 0.501f;
   *intensity = probabilityFromLogOdds(voxel.log_odds);
+  // return ((probabilityFromLogOdds(voxel.log_odds) < kMaxProbability) && (probabilityFromLogOdds(voxel.log_odds) > kMinProbability));
   return probabilityFromLogOdds(voxel.log_odds) > kMinProbability;
 }
 
@@ -100,11 +102,14 @@ __global__ void copyLayerToPCLKernel(
       block_ptr->voxels[voxel_index.x()][voxel_index.y()][voxel_index.z()];
   float intensity = 0.0f;
   if (!getVoxelIntensity<VoxelType>(voxel, voxel_size, &intensity)) {
+    // intensity = 0.99;
     return;
   }
 
   // Otherwise shove it in the output.
+  // std::cout << max_index << std::endl;
   int next_index = atomicAdd(max_index, 1);
+  // printf(">>> %d, %d\n", *max_index, next_index);
 
   if (next_index >= max_output_indices) {
     printf("Overrunning the space. This shouldn't happen.\n");
@@ -115,6 +120,7 @@ __global__ void copyLayerToPCLKernel(
   point.y = voxel_position.y();
   point.z = voxel_position.z();
   point.intensity = intensity;
+  // printf(">>>> %f, %f, %f \n", point.x, point.y, point.z);
 }
 
 template <typename VoxelType>
@@ -172,6 +178,9 @@ void LayerConverter::pointcloudMsgFromLayerInAABB(
   // Copy the pointcloud out.
   max_index_host_ = max_index_device_.clone(MemoryType::kHost);
   pcl_pointcloud_device_.resize(*max_index_host_);
+  // PclPointXYZI *p = pcl_pointcloud_device_.data();
+  // printf(">>>>>>>>>>> %f \n", p[0].x);
+  // std::cout << pcl_pointcloud_device_.data()[0] << std::endl;
 
   // Copy to the message
   copyDevicePointcloudToMsg(pcl_pointcloud_device_, pointcloud);

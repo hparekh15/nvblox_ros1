@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="camera_transform" args="2.87836373e-02 -3.99214594e-02 -1.74024667e-02 0.0983663 0.7679008 -0.6278219 -0.0805736 Camera camera_optical_frame" />
+</launch>

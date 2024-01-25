@@ -99,7 +99,7 @@ bool Transformer::lookupTransformTf(const std::string& from_frame,
                                  ros::Duration(0.1))) {
       T_L_C_msg = tf_buffer_->lookupTransform(from_frame, to_frame, timestamp);
     } else {
-      ROS_DEBUG_STREAM("Cant transform: from:" << from_frame << " to "
+      ROS_INFO_STREAM("Cant transform: from:" << from_frame << " to "
                                                << to_frame << ". Error string: "
                                                << error_string);
       return false;
@@ -110,7 +110,21 @@ bool Transformer::lookupTransformTf(const std::string& from_frame,
     return false;
   }
 
+  // const auto& transform1 = T_L_C_msg.transform;
+
+  // Eigen::Translation3d trans(transform1.translation.x, transform1.translation.y, transform1.translation.z);
+  // Eigen::Quaterniond rot(transform1.rotation.w, transform1.rotation.x, transform1.rotation.y, transform1.rotation.z);
+
+  // Eigen::Transform<double, 3, Eigen::Affine> affine = trans * rot;
+  // Eigen::Matrix4d matrix = affine.matrix();
+
+  // std::cout << "Matrix:\n" << matrix << std::endl;
+
   *transform = transformToEigen(T_L_C_msg.transform);
+  //ROS_INFO_STREAM(">>>>> transform" << *transform);
+  std::cout << ">>> In lookupTransformTf: x, y, z, quat: " << T_L_C_msg.transform.translation.x << " " << T_L_C_msg.transform.translation.y <<
+  " " << T_L_C_msg.transform.translation.z << " " << T_L_C_msg.transform.rotation.w << " " << T_L_C_msg.transform.rotation.x <<
+  " " << T_L_C_msg.transform.rotation.y << " " << T_L_C_msg.transform.rotation.z << std::endl;
   return true;
 }
 
@@ -177,6 +191,14 @@ Transform Transformer::transformToEigen(
                    Eigen::Quaternionf(msg.rotation.w, msg.rotation.x,
                                       msg.rotation.y, msg.rotation.z));
 }
+
+// Eigen::Matrix4d convertROSTransformToEigenMatrix(const geometry_msgs::Transform& transform) {
+//     Eigen::Translation3d trans(transform.translation.x, transform.translation.y, transform.translation.z);
+//     Eigen::Quaterniond rot(transform.rotation.w, transform.rotation.x, transform.rotation.y, transform.rotation.z);
+//     Eigen::Matrix4d matrix = trans * rot.toRotationMatrix();
+//     return matrix;
+// }
+
 
 Transform Transformer::poseToEigen(const geometry_msgs::Pose& msg) const {
   return Transform(

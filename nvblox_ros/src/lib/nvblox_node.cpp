@@ -58,7 +58,9 @@ NvbloxNode::NvbloxNode(ros::NodeHandle& nh, ros::NodeHandle& nh_private)
   initializeMapper(mapper_.get(), nh_private_);
 
   // Setup interactions with ROS
+  // ROS_INFO(">>>>>>>> before subscribeToTopics");
   subscribeToTopics();
+  // ROS_INFO(">>>>>>>> after subscribeToTopics");
   setupTimers();
   advertiseTopics();
   advertiseServices();
@@ -85,10 +87,10 @@ void NvbloxNode::getParameters() {
   ROS_INFO_STREAM("Getting parameters from parameter server.");
 
   // Get the type of layer to use.
-  bool is_occupancy = false;
+  bool is_occupancy = true;
   nh_private_.param("use_static_occupancy_layer", is_occupancy, is_occupancy);
 
-  if (is_occupancy) {
+  if (true) {
     static_projective_layer_type_ = ProjectiveLayerType::kOccupancy;
     ROS_INFO_STREAM(
         "static_projective_layer_type: occupancy (Attention: ESDF and Mesh "
@@ -156,6 +158,11 @@ void NvbloxNode::getParameters() {
                     clear_outside_radius_rate_hz_);
 }
 
+void NvbloxNode::chatterCallback(const sensor_msgs::Image::ConstPtr& msg)
+{
+  ROS_INFO("cnm");
+}
+
 void NvbloxNode::subscribeToTopics() {
   ROS_INFO_STREAM("Subscribing to topics.");
 
@@ -165,10 +172,13 @@ void NvbloxNode::subscribeToTopics() {
         "reconstructions will not update");
   }
 
-  if (use_depth_) {
+  if (true) {
     // Subscribe to synchronized depth + cam_info topics
+    // std::cout << "hah" << std::endl;
     depth_sub_.subscribe(nh_, "depth/image",
                          maximum_sensor_message_queue_length_);
+    // depth_sub_2.subscribe(nh_, "depth/image", chatterCallback);
+    // ros::Subscriber sub = nh_.subscribe("depth/image", 1, chatterCallback);
     depth_camera_info_sub_.subscribe(nh_, "depth/camera_info",
                                      maximum_sensor_message_queue_length_);
 
@@ -219,7 +229,7 @@ void NvbloxNode::advertiseTopics() {
   slice_bounds_publisher_ = nh_private_.advertise<visualization_msgs::Marker>(
       "map_slice_bounds", 1, true);
   occupancy_publisher_ =
-      nh_private_.advertise<sensor_msgs::PointCloud2>("occupancy", 1, false);
+      nh_private_.advertise<sensor_msgs::PointCloud2>("occupancy", 1, true);
 }
 
 void NvbloxNode::advertiseServices() {
@@ -232,7 +242,8 @@ void NvbloxNode::advertiseServices() {
 }
 
 void NvbloxNode::setupTimers() {
-  if (use_depth_) {
+  ROS_INFO(">>>>>>> in setupTimers");
+  if (true) {
     ros::TimerOptions timer_options(
         ros::Duration(1.0 / max_poll_rate_hz_),
         boost::bind(&NvbloxNode::processDepthQueue, this, _1),
@@ -254,13 +265,13 @@ void NvbloxNode::setupTimers() {
         &processing_queue_);
     pointcloud_processing_timer_ = nh_private_.createTimer(timer_options);
   }
-  if (compute_esdf_) {
+  if (false) {
     ros::TimerOptions timer_options(
-        ros::Duration(1.0 / esdf_update_rate_hz_),
+        ros::Duration(1.0 / 30),
         boost::bind(&NvbloxNode::processEsdf, this, _1), &processing_queue_);
     esdf_processing_timer_ = nh_private_.createTimer(timer_options);
   }
-  if (compute_mesh_) {
+  if (false) {
     ros::TimerOptions timer_options(
         ros::Duration(1.0 / mesh_update_rate_hz_),
         boost::bind(&NvbloxNode::processMesh, this, _1), &processing_queue_);
@@ -270,7 +281,7 @@ void NvbloxNode::setupTimers() {
   }
   if (static_projective_layer_type_ == ProjectiveLayerType::kOccupancy) {
     ros::TimerOptions timer_options(
-        ros::Duration(1.0 / occupancy_publication_rate_hz_),
+        ros::Duration(1.0 / 30),
         boost::bind(&NvbloxNode::publishOccupancyPointcloud, this, _1),
         &processing_queue_);
     occupancy_publishing_timer_ = nh_private_.createTimer(timer_options);
@@ -298,6 +309,7 @@ void NvbloxNode::poseCallback(
 void NvbloxNode::depthImageCallback(
     const sensor_msgs::ImageConstPtr& depth_img_ptr,
     const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg) {
+  std::cout << "in depthImageCallback  " << std::endl;
   pushMessageOntoQueue({depth_img_ptr, camera_info_msg}, &depth_image_queue_,
                        &depth_queue_mutex_);
 }
@@ -316,17 +328,23 @@ void NvbloxNode::pointcloudCallback(
 }
 
 void NvbloxNode::processDepthQueue(const ros::TimerEvent& /*event*/) {
+  // ROS_INFO(">>>>>>>>>> in processDepthQueue");
   using ImageInfoMsgPair =
       std::pair<sensor_msgs::ImageConstPtr, sensor_msgs::CameraInfo::ConstPtr>;
   auto message_ready = [this](const ImageInfoMsgPair& msg) {
+    std::cout << "in message_ready:" << msg.first->header << std::endl;
     return this->canTransform(msg.first->header);
   };
+  // ROS_INFO(">>>>>>>>>> test");
+  // std::cout << "depth_image_queue_   " << depth_image_queue_.size() << std::endl;
 
   processMessageQueue<ImageInfoMsgPair>(
       &depth_image_queue_,  // NOLINT
       &depth_queue_mutex_,  // NOLINT
       message_ready,        // NOLINT
       std::bind(&NvbloxNode::processDepthImage, this, std::placeholders::_1));
+
+  // ROS_INFO(">>>>>>>>>> after processMessageQueue");
 
   limitQueueSizeByDeletingOldestMessages(maximum_sensor_message_queue_length_,
                                          "depth", &depth_image_queue_,
@@ -452,6 +470,7 @@ void NvbloxNode::processEsdf(const ros::TimerEvent& /*event*/) {
   // If we don't want the slice, output the full map.
   if (!esdf_distance_slice_ &&
       esdf_pointcloud_publisher_.getNumSubscribers() > 0) {
+        // std::cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << std::endl;
     timing::Timer esdf_output_esdf_full_map_timer("ros/esdf/output/full_cloud");
     sensor_msgs::PointCloud2 pointcloud_msg;
     layer_converter_.pointcloudMsgFromLayer(mapper_->esdf_layer(),
@@ -522,8 +541,27 @@ void NvbloxNode::processMesh(const ros::TimerEvent& /*event*/) {
 
 bool NvbloxNode::canTransform(const std_msgs::Header& header) {
   Transform T_L_C;
-  return transformer_.lookupTransformToGlobalFrame(header.frame_id,
-                                                   header.stamp, &T_L_C);
+  std::cout << ">>>>>>>>>>>>> "
+            << "in canTransform: " << header.frame_id << std::endl;
+  if (header.frame_id == "depth_camera") {
+    return transformer_.lookupTransformToGlobalFrame(header.frame_id,
+                                                     header.stamp, &T_L_C);
+  } else if (header.frame_id == "cam_1_color_optical_frame") {
+    // std::string test1 = "actual_cam_1";
+    std::string test1 = "camera_1_optical_frame";
+    return transformer_.lookupTransformToGlobalFrame(test1, header.stamp,
+                                                     &T_L_C);
+  } else if (header.frame_id == "cam_2_color_optical_frame") {
+    // std::string test1 = "actual_cam_2";
+    std::string test1 = "camera_2_optical_frame";
+    return transformer_.lookupTransformToGlobalFrame(test1, header.stamp,
+                                                     &T_L_C);
+  } else if (header.frame_id == "actual_camera") {
+    // for simulation
+    std::string test1 = "actual_camera";
+    return transformer_.lookupTransformToGlobalFrame(test1, header.stamp,
+                                                     &T_L_C);
+  }
 }
 
 bool NvbloxNode::isUpdateTooFrequent(const ros::Time& current_stamp,
@@ -539,7 +577,7 @@ bool NvbloxNode::isUpdateTooFrequent(const ros::Time& current_stamp,
 bool NvbloxNode::processDepthImage(
     const std::pair<sensor_msgs::ImageConstPtr,
                     sensor_msgs::CameraInfo::ConstPtr>& depth_camera_pair) {
-  ROS_DEBUG("Depth Image processing has started");
+  ROS_INFO_STREAM("Depth Image processing has started");
   timing::Timer ros_depth_timer("ros/depth");
   timing::Timer transform_timer("ros/depth/transform");
 
@@ -557,7 +595,20 @@ bool NvbloxNode::processDepthImage(
 
   // Get the TF for this image.
   Transform T_L_C;
-  std::string target_frame = depth_img_ptr->header.frame_id;
+  std::string test2 = depth_img_ptr->header.frame_id;
+  std::string target_frame;
+  if (test2 == "depth_camera") {
+    target_frame = depth_img_ptr->header.frame_id;
+  } else if (test2 == "cam_1_color_optical_frame") {
+    // target_frame = "actual_cam_1";
+    target_frame = "camera_1_optical_frame";
+  } else if (test2 == "cam_2_color_optical_frame") {
+    // target_frame = "actual_cam_2";
+    target_frame = "camera_2_optical_frame";
+  } else if (test2 == "actual_camera") {
+    target_frame = "actual_camera";
+  }
+  std::cout << target_frame << std::endl;
 
   if (!transformer_.lookupTransformToGlobalFrame(
           target_frame, depth_img_ptr->header.stamp, &T_L_C)) {
@@ -691,14 +742,50 @@ bool NvbloxNode::processLidarPointcloud(
 void NvbloxNode::publishOccupancyPointcloud(const ros::TimerEvent& /*event*/) {
   timing::Timer ros_total_timer("ros/total");
   timing::Timer esdf_output_timer("ros/occupancy/output");
-
+  // std::cout << pointcloud_msg;
+  // std::cout << occupancy_publisher_.getNumSubscribers() << std::endl;
   if (occupancy_publisher_.getNumSubscribers() > 0) {
     sensor_msgs::PointCloud2 pointcloud_msg;
     std::unique_lock<std::mutex> lock(map_mutex_);
+    // ROS_INFO_STREAM("                        KJSDHFlvasdhlfkhsdfheis ");
+    // VoxelBlockLayer<VoxelType>& layer11 = mapper_->occupancy_layer();
     layer_converter_.pointcloudMsgFromLayer(mapper_->occupancy_layer(),
                                             &pointcloud_msg);
+    ROS_INFO_STREAM(">>>>>>>> in publishOccupancyPointcloud");
     pointcloud_msg.header.frame_id = global_frame_;
     pointcloud_msg.header.stamp = ros::Time::now();
+    // ROS_INFO_STREAM(">>>>>>>>>>>>>>>>>>>>>> "
+    //               << pointcloud_msg.width << pointcloud_msg.height <<
+    //               pointcloud_msg.point_step << pointcloud_msg.row_step <<
+    //               pointcloud_msg.data.size());
+    // ROS_INFO_STREAM(">>> width: " << pointcloud_msg.width);
+    // ROS_INFO_STREAM(">>> height: " << pointcloud_msg.height);
+    // ROS_INFO_STREAM(">>> point_step: " << pointcloud_msg.point_step);
+    // ROS_INFO_STREAM(">>> row_step: " << pointcloud_msg.row_step);
+    ROS_INFO_STREAM(">>> data size: " << pointcloud_msg.data.size());
+    // auto iter = pointcloud_msg.data.begin();
+    // ROS_INFO_STREAM(">>> data: " << *iter);
+    // // ROS_INFO_STREAM(">>> len(fields): " << pointcloud_msg.fields);
+    // // for (i=0; i<pointcloud_msg.fields.size(); i++)
+    // ROS_INFO_STREAM(">>> fields[3]: " << pointcloud_msg.fields[3].name);
+    // ROS_INFO_STREAM(">>> fields[3]: " << pointcloud_msg.fields[3].offset);
+    // ROS_INFO_STREAM(">>> fields[3]: " << pointcloud_msg.fields[3].datatype);
+    // ROS_INFO_STREAM(">>> fields[3]: " << pointcloud_msg.fields[3].count);
+    // ROS_INFO_STREAM(">>> fields[1]: " << pointcloud_msg.fields[1].offset);
+    // ROS_INFO_STREAM(">>> fields[2]: " << pointcloud_msg.fields[2].offset);
+    // ROS_INFO_STREAM(">>> fields[3]: " << pointcloud_msg.fields[3].offset);
+    // ROS_INFO_STREAM(">>> fields[4]: " << pointcloud_msg.fields[4].name);
+    // sensor_msgs::Pointcloud out_cloud;
+    // sensor_msgs::convertPointCloud2ToPointCloud(pointcloud_msg, out_cloud);
+
+    // for(int i = 0 ; i < out_cloud.points.size(); ++i){
+    //     geometry_msgs::Point32 point;
+
+    //     //Dooo something here
+    //     point.z = out_cloud.points[i].z;
+    //     ROS_INFO_STREAM(">>> fields[3]: " << pointcloud_msg.fields[3].count);
+    // }
+
     occupancy_publisher_.publish(pointcloud_msg);
   }
 }

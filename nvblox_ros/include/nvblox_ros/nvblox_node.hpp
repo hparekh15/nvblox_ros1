@@ -39,6 +39,7 @@
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 #include <std_msgs/String.h>
 #include <visualization_msgs/Marker.h>
 
@@ -62,6 +63,7 @@ class NvbloxNode {
   // Setup. These are called by the constructor.
   void getParameters();
   void subscribeToTopics();
+  static void chatterCallback(const sensor_msgs::Image::ConstPtr& msg);
   void advertiseTopics();
   void advertiseServices();
   void setupTimers();
@@ -179,6 +181,7 @@ class NvbloxNode {
   // Depth sub.
   std::shared_ptr<message_filters::Synchronizer<time_policy_t>> timesync_depth_;
   message_filters::Subscriber<sensor_msgs::Image> depth_sub_;
+  message_filters::Subscriber<sensor_msgs::Image> depth_sub_2;
   message_filters::Subscriber<sensor_msgs::CameraInfo> depth_camera_info_sub_;
 
   // Color sub
@@ -228,8 +231,8 @@ class NvbloxNode {
   bool use_depth_ = true;
   bool use_lidar_ = false;
   bool use_color_ = true;
-  bool compute_esdf_ = true;
-  bool compute_mesh_ = true;
+  bool compute_esdf_ = false;
+  bool compute_mesh_ = false;
 
   // LIDAR settings, defaults for Velodyne VLP16
   int lidar_width_ = 1800;
